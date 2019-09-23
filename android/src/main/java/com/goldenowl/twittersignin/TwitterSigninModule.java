@@ -11,10 +11,12 @@ import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.WritableMap;
+import com.twitter.sdk.android.core.Callback;
 import com.twitter.sdk.android.core.DefaultLogger;
 import com.twitter.sdk.android.core.Result;
 import com.twitter.sdk.android.core.SessionManager;
 import com.twitter.sdk.android.core.Twitter;
+import com.twitter.sdk.android.core.TwitterApiClient;
 import com.twitter.sdk.android.core.TwitterAuthConfig;
 import com.twitter.sdk.android.core.TwitterAuthToken;
 import com.twitter.sdk.android.core.TwitterConfig;
@@ -22,6 +24,7 @@ import com.twitter.sdk.android.core.TwitterCore;
 import com.twitter.sdk.android.core.TwitterException;
 import com.twitter.sdk.android.core.TwitterSession;
 import com.twitter.sdk.android.core.identity.TwitterAuthClient;
+import com.twitter.sdk.android.core.models.User;
 
 import java.util.Map;
 import java.util.Set;
@@ -92,6 +95,34 @@ public class TwitterSigninModule extends ReactContextBaseJavaModule implements A
                 promise.reject("USER_CANCELLED", exception.getMessage(), exception);
             }
         });
+    }
+
+    @ReactMethod
+    public void getProfileUrl(final Promise promise) {
+        TwitterCore instance = TwitterCore.getInstance();
+        SessionManager<TwitterSession> sessionManager = instance.getSessionManager();
+        Map<Long, TwitterSession> sessions = sessionManager.getSessionMap();
+
+        final WritableMap map = Arguments.createMap();
+
+
+        TwitterCore.getInstance().getApiClient(sessionManager.getActiveSession()).getAccountService().verifyCredentials(false,true,true).enqueue(new Callback<User>() {
+            @Override
+            public void success(Result<User> userResult) {
+                try {
+                    map.putString("profileImageLargeURL", userResult.data.profileImageUrl.replace("_normal", ""));
+                    promise.resolve(map);
+                } catch (Exception e) {
+                    map.putString("email", "COULD_NOT_FETCH");
+                    promise.reject("COULD_NOT_FETCH", map.toString());
+                }
+            }
+            @Override
+            public void failure(TwitterException e) {
+                promise.resolve(map);
+            }
+        });
+
     }
 
     @ReactMethod

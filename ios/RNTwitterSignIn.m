@@ -31,9 +31,9 @@ RCT_EXPORT_METHOD(logIn: (RCTPromiseResolveBlock)resolve
     [[Twitter sharedInstance] logInWithCompletion:^(TWTRSession * _Nullable session, NSError * _Nullable error) {
         if (session) {
             TWTRAPIClient *client = [TWTRAPIClient clientWithCurrentUser];
-
+            
             [client requestEmailForCurrentUser:^(NSString *email, NSError *error) {
-                NSString *requestedEmail = (email) ? email : @"";
+                NSString *requestedEmail = (email) ? email : @"";              
                 NSDictionary *body = @{@"authToken": session.authToken,
                                        @"authTokenSecret": session.authTokenSecret,
                                        @"userID":session.userID,
@@ -45,6 +45,26 @@ RCT_EXPORT_METHOD(logIn: (RCTPromiseResolveBlock)resolve
             reject(@"Error", @"Twitter signin error", error);
         }
     }];
+}
+
+RCT_EXPORT_METHOD(getProfileUrl: (RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+{
+    TWTRSessionStore *store = [[Twitter sharedInstance] sessionStore];
+    NSString *userID = store.session.userID;
+    if (userID) {
+        TWTRAPIClient *client = [TWTRAPIClient clientWithCurrentUser];
+        [client loadUserWithID:(userID) completion:^(TWTRUser * _Nullable user, NSError * _Nullable error) {
+            if(user) {
+                NSString *profileImageURLLarge = [user.profileImageLargeURL stringByReplacingOccurrencesOfString:@"_reasonably_small"
+                                                                                                     withString:@""];
+                NSDictionary *body = @{@"profileImageLargeURL": profileImageURLLarge };
+                resolve(body);
+            } else {
+                reject(@"Error", @"Profile Url not found", error);
+            }
+        }];
+    }
 }
 
 RCT_EXPORT_METHOD(logOut)
